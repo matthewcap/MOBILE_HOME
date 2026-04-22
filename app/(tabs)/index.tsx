@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,6 +26,8 @@ export default function HabitsScreen() {
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [todayLogs, setTodayLogs] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [filterCategory, setFilterCategory] = useState<number | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -95,7 +98,6 @@ export default function HabitsScreen() {
       Alert.alert("Error", "Please select a category");
       return;
     }
-
     if (editingHabit) {
       await db
         .update(habits)
@@ -110,7 +112,6 @@ export default function HabitsScreen() {
         userId: global.userId,
       });
     }
-
     setModalVisible(false);
     loadData();
   };
@@ -147,6 +148,18 @@ export default function HabitsScreen() {
     ]);
   };
 
+  // Filter habits by search text and category
+  const filteredHabits = habitsList.filter((habit) => {
+    const matchesSearch = habit.name
+      .toLowerCase()
+      .includes(searchText.toLowerCase());
+    const matchesCategory =
+      filterCategory === null || habit.categoryId === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const completedCount = todayLogs.filter((l) => l.completed === 1).length;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -164,15 +177,104 @@ export default function HabitsScreen() {
         })}
       </Text>
 
-      {habitsList.length === 0 ? (
+      {/* Progress Summary */}
+      <View style={styles.progressCard}>
+        <Text style={styles.progressText}>
+          {completedCount} of {habitsList.length} completed today
+        </Text>
+        <View style={styles.progressBar}>
+          <View
+            style={[
+              styles.progressFill,
+              {
+                width: habitsList.length > 0
+                  ? `${(completedCount / habitsList.length) * 100}%`
+                  : "0%",
+              } as any,
+            ]}
+          />
+        </View>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={18} color="#999" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search habits..."
+          value={searchText}
+          onChangeText={setSearchText}
+          accessibilityLabel="Search habits"
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchText("")}>
+            <Ionicons name="close-circle" size={18} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Category Filter */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterRow}
+      >
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            filterCategory === null && styles.filterChipActive,
+          ]}
+          onPress={() => setFilterCategory(null)}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              filterCategory === null && styles.filterChipTextActive,
+            ]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+        {categoriesList.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={[
+              styles.filterChip,
+              filterCategory === cat.id && {
+                backgroundColor: cat.colour,
+                borderColor: cat.colour,
+              },
+            ]}
+            onPress={() =>
+              setFilterCategory(filterCategory === cat.id ? null : cat.id)
+            }
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                filterCategory === cat.id && styles.filterChipTextActive,
+              ]}
+            >
+              {cat.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Habits List */}
+      {filteredHabits.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="checkmark-circle-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>No habits yet</Text>
-          <Text style={styles.emptySubtext}>Tap + to add your first habit</Text>
+          <Text style={styles.emptyText}>
+            {searchText || filterCategory ? "No habits match your search" : "No habits yet"}
+          </Text>
+          <Text style={styles.emptySubtext}>
+            {searchText || filterCategory ? "Try a different filter" : "Tap + to add your first habit"}
+          </Text>
         </View>
       ) : (
         <FlatList
-          data={habitsList}
+          data={filteredHabits}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => {
             const category = getCategoryForHabit(item.categoryId);
@@ -229,7 +331,6 @@ export default function HabitsScreen() {
             <Text style={styles.modalTitle}>
               {editingHabit ? "Edit Habit" : "New Habit"}
             </Text>
-
             <TextInput
               style={styles.input}
               placeholder="Habit name"
@@ -244,7 +345,6 @@ export default function HabitsScreen() {
               onChangeText={setDescription}
               accessibilityLabel="Habit description input"
             />
-
             <Text style={styles.label}>Category</Text>
             <View style={styles.categoryRow}>
               {categoriesList.map((cat) => (
@@ -266,7 +366,6 @@ export default function HabitsScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
@@ -297,10 +396,50 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: { fontSize: 24, fontWeight: "bold", color: "#333" },
-  dateText: { fontSize: 14, color: "#999", marginBottom: 16 },
+  dateText: { fontSize: 14, color: "#999", marginBottom: 12 },
+  progressCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  progressText: { fontSize: 14, color: "#555", marginBottom: 8 },
+  progressBar: {
+    height: 8,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: { height: "100%", backgroundColor: "#2ECC71", borderRadius: 4 },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 10,
+    elevation: 2,
+    gap: 8,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: "#333" },
+  filterRow: { marginBottom: 12 },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+    marginRight: 8,
+  },
+  filterChipActive: { backgroundColor: "#4A90E2", borderColor: "#4A90E2" },
+  filterChipText: { fontSize: 13, color: "#555" },
+  filterChipTextActive: { color: "#fff", fontWeight: "600" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { fontSize: 18, color: "#999", marginTop: 12 },
-  emptySubtext: { fontSize: 14, color: "#ccc", marginTop: 4 },
+  emptyText: { fontSize: 18, color: "#999", marginTop: 12, textAlign: "center" },
+  emptySubtext: { fontSize: 14, color: "#ccc", marginTop: 4, textAlign: "center" },
   habitItem: {
     flexDirection: "row",
     alignItems: "center",
