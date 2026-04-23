@@ -2,13 +2,14 @@ import { eq } from "drizzle-orm";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import FormField from "../../components/FormField";
+import { colours, radius, spacing } from "../../constants/theme";
 import { db } from "../../db";
 import { users } from "../../db/schema";
 
@@ -17,6 +18,7 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!username || !password || !confirm) {
@@ -27,65 +29,82 @@ export default function RegisterScreen() {
       Alert.alert("Error", "Passwords do not match");
       return;
     }
+    setLoading(true);
+    try {
+      const existing = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
 
-    // Check if username already exists
-    const existing = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
+      if (existing.length > 0) {
+        Alert.alert("Error", "Username already taken");
+        return;
+      }
 
-    if (existing.length > 0) {
-      Alert.alert("Error", "Username already taken");
-      return;
+      await db.insert(users).values({
+        username,
+        password,
+        createdAt: new Date().toISOString(),
+      });
+
+      Alert.alert("Success", "Account created! Please login.");
+      router.replace("/auth/login");
+    } catch (e) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    await db.insert(users).values({
-      username,
-      password,
-      createdAt: new Date().toISOString(),
-    });
-
-    Alert.alert("Success", "Account created! Please login.");
-    router.replace("/auth/login");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Start tracking your habits today</Text>
+      <View style={styles.hero}>
+        <Text style={styles.logo}>✅</Text>
+        <Text style={styles.appName}>HabitFlow</Text>
+        <Text style={styles.tagline}>Start your journey today</Text>
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-        accessibilityLabel="Username input"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        accessibilityLabel="Password input"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirm}
-        onChangeText={setConfirm}
-        secureTextEntry
-        accessibilityLabel="Confirm password input"
-      />
+      <View style={styles.card}>
+        <Text style={styles.heading}>Create Account</Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
-        <Text style={styles.buttonText}>Register</Text>
-      </TouchableOpacity>
+        <FormField
+          label="Username"
+          placeholder="Choose a username"
+          value={username}
+          onChangeText={setUsername}
+          accessibilityLabel="Username input"
+        />
+        <FormField
+          label="Password"
+          placeholder="Choose a password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          accessibilityLabel="Password input"
+        />
+        <FormField
+          label="Confirm Password"
+          placeholder="Confirm your password"
+          value={confirm}
+          onChangeText={setConfirm}
+          secureTextEntry
+          accessibilityLabel="Confirm password input"
+        />
 
-      <TouchableOpacity onPress={() => router.replace("/auth/login")}>
-        <Text style={styles.link}>Already have an account? Login</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Creating account..." : "Register"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => router.replace("/auth/login")}>
+          <Text style={styles.link}>Already have an account? Login</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -93,46 +112,45 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colours.primary,
+    justifyContent: "flex-end",
+  },
+  hero: {
+    alignItems: "center",
+    paddingBottom: spacing.xl,
+    flex: 1,
     justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#fff",
   },
-  title: {
-    fontSize: 32,
+  logo: { fontSize: 64, marginBottom: spacing.sm },
+  appName: {
+    fontSize: 36,
     fontWeight: "bold",
-    color: "#4A90E2",
-    textAlign: "center",
-    marginBottom: 8,
+    color: "#fff",
+    marginBottom: spacing.xs,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 32,
+  tagline: { fontSize: 16, color: "rgba(255,255,255,0.8)" },
+  card: {
+    backgroundColor: colours.card,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: spacing.lg,
+    paddingBottom: 40,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
+  heading: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: colours.text,
+    marginBottom: spacing.lg,
   },
   button: {
-    backgroundColor: "#4A90E2",
+    backgroundColor: colours.primary,
     padding: 14,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: spacing.md,
+    marginTop: spacing.xs,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  link: {
-    color: "#4A90E2",
-    textAlign: "center",
-    fontSize: 14,
-  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  link: { color: colours.primary, textAlign: "center", fontSize: 14 },
 });
