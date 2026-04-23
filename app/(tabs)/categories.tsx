@@ -2,15 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { eq } from "drizzle-orm";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 import { db } from "../../db";
 import { categories } from "../../db/schema";
 
@@ -26,6 +27,7 @@ const ICONS = [
 ];
 
 export default function CategoriesScreen() {
+  const { colours } = useTheme();
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
@@ -63,7 +65,6 @@ export default function CategoriesScreen() {
       Alert.alert("Error", "Please enter a category name");
       return;
     }
-
     if (editingCategory) {
       await db
         .update(categories)
@@ -76,7 +77,6 @@ export default function CategoriesScreen() {
         icon: selectedIcon,
       });
     }
-
     setModalVisible(false);
     loadCategories();
   };
@@ -100,31 +100,31 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Categories</Text>
+    <View style={[styles.container, { backgroundColor: colours.background }]}>
+      <Text style={[styles.title, { color: colours.text }]}>Categories</Text>
 
       {categoriesList.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="folder-open-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>No categories yet</Text>
-          <Text style={styles.emptySubtext}>Add one to get started</Text>
+          <Ionicons name="folder-open-outline" size={48} color={colours.textLight} />
+          <Text style={[styles.emptyText, { color: colours.textLight }]}>No categories yet</Text>
+          <Text style={[styles.emptySubtext, { color: colours.textLight }]}>Add one to get started</Text>
         </View>
       ) : (
         <FlatList
           data={categoriesList}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <View style={styles.categoryItem}>
+            <View style={[styles.categoryItem, { backgroundColor: colours.card }]}>
               <View style={[styles.iconBadge, { backgroundColor: item.colour }]}>
                 <Ionicons name={item.icon || "folder"} size={20} color="#fff" />
               </View>
-              <Text style={styles.categoryName}>{item.name}</Text>
+              <Text style={[styles.categoryName, { color: colours.text }]}>{item.name}</Text>
               <View style={styles.actions}>
                 <TouchableOpacity onPress={() => openEditModal(item)}>
-                  <Ionicons name="pencil-outline" size={20} color="#4A90E2" />
+                  <Ionicons name="pencil-outline" size={20} color={colours.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDelete(item)} style={{ marginLeft: 12 }}>
-                  <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                  <Ionicons name="trash-outline" size={20} color={colours.danger} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -138,20 +138,21 @@ export default function CategoriesScreen() {
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+          <View style={[styles.modalContent, { backgroundColor: colours.card }]}>
+            <Text style={[styles.modalTitle, { color: colours.text }]}>
               {editingCategory ? "Edit Category" : "New Category"}
             </Text>
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colours.border, color: colours.text }]}
               placeholder="Category name"
+              placeholderTextColor={colours.textLight}
               value={name}
               onChangeText={setName}
               accessibilityLabel="Category name input"
             />
 
-            <Text style={styles.label}>Colour</Text>
+            <Text style={[styles.label, { color: colours.text }]}>Colour</Text>
             <View style={styles.colourRow}>
               {COLOURS.map((colour) => (
                 <TouchableOpacity
@@ -166,28 +167,33 @@ export default function CategoriesScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Icon</Text>
+            <Text style={[styles.label, { color: colours.text }]}>Icon</Text>
             <View style={styles.iconRow}>
               {ICONS.map((icon) => (
                 <TouchableOpacity
                   key={icon}
                   style={[
                     styles.iconOption,
+                    { backgroundColor: colours.background },
                     selectedIcon === icon && styles.iconSelected,
                   ]}
                   onPress={() => setSelectedIcon(icon)}
                 >
-                  <Ionicons name={icon as any} size={22} color={selectedIcon === icon ? "#fff" : "#555"} />
+                  <Ionicons
+                    name={icon as any}
+                    size={22}
+                    color={selectedIcon === icon ? "#fff" : colours.text}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.button, { backgroundColor: colours.border }]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: colours.text }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
                 <Text style={styles.saveText}>Save</Text>
@@ -201,21 +207,17 @@ export default function CategoriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5", padding: 16 },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 16 },
+  container: { flex: 1, padding: 16 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { fontSize: 18, color: "#999", marginTop: 12 },
-  emptySubtext: { fontSize: 14, color: "#ccc", marginTop: 4 },
+  emptyText: { fontSize: 18, marginTop: 12 },
+  emptySubtext: { fontSize: 14, marginTop: 4 },
   categoryItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     padding: 14,
     borderRadius: 10,
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     elevation: 2,
   },
   iconBadge: {
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  categoryName: { flex: 1, fontSize: 16, color: "#333" },
+  categoryName: { flex: 1, fontSize: 16 },
   actions: { flexDirection: "row" },
   fab: {
     position: "absolute",
@@ -246,32 +248,22 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
   },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 16, color: "#333" },
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 16 },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
   },
-  label: { fontSize: 14, fontWeight: "600", color: "#555", marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
   colourRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
-  colourCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    margin: 4,
-  },
-  colourSelected: {
-    borderWidth: 3,
-    borderColor: "#333",
-  },
+  colourCircle: { width: 32, height: 32, borderRadius: 16, margin: 4 },
+  colourSelected: { borderWidth: 3, borderColor: "#333" },
   iconRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
   iconOption: {
     width: 40,
@@ -280,18 +272,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     margin: 4,
-    backgroundColor: "#f0f0f0",
   },
   iconSelected: { backgroundColor: "#4A90E2" },
   modalButtons: { flexDirection: "row", gap: 12 },
-  button: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelButton: { backgroundColor: "#f0f0f0" },
+  button: { flex: 1, padding: 14, borderRadius: 8, alignItems: "center" },
   saveButton: { backgroundColor: "#4A90E2" },
-  cancelText: { color: "#555", fontWeight: "600" },
+  cancelText: { fontWeight: "600" },
   saveText: { color: "#fff", fontWeight: "600" },
 });

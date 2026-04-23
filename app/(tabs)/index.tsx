@@ -13,11 +13,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 import { db } from "../../db";
-import { categories, habitLogs, habits } from "../../db/schema";
+import { categories, habitLogs, habits, users } from "../../db/schema";
+
+declare global {
+  var userId: number | undefined;
+}
 
 export default function HabitsScreen() {
   const router = useRouter();
+  const { colours, theme, toggleTheme } = useTheme();
   const [habitsList, setHabitsList] = useState<any[]>([]);
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -147,8 +153,29 @@ export default function HabitsScreen() {
       },
     ]);
   };
+  const handleDeleteProfile = () => {
+  Alert.alert(
+    "Delete Profile",
+    "Are you sure you want to permanently delete your account? This cannot be undone.",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await db.delete(users).where(eq(users.id, global.userId!));
+            global.userId = undefined;
+            router.replace("/auth/login");
+          } catch (e) {
+            Alert.alert("Error", "Could not delete profile. Please try again.");
+          }
+        },
+      },
+    ]
+  );
+};
 
-  // Filter habits by search text and category
   const filteredHabits = habitsList.filter((habit) => {
     const matchesSearch = habit.name
       .toLowerCase()
@@ -161,15 +188,27 @@ export default function HabitsScreen() {
   const completedCount = todayLogs.filter((l) => l.completed === 1).length;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colours.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Habits</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={26} color="#E74C3C" />
-        </TouchableOpacity>
-      </View>
+  <Text style={[styles.title, { color: colours.text }]}>My Habits</Text>
+  <View style={{ flexDirection: "row", gap: 16 }}>
+    <TouchableOpacity onPress={toggleTheme}>
+      <Ionicons
+        name={theme === "light" ? "moon-outline" : "sunny-outline"}
+        size={24}
+        color={colours.text}
+      />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={handleDeleteProfile}>
+      <Ionicons name="person-remove-outline" size={24} color={colours.warning} />
+    </TouchableOpacity>
+    <TouchableOpacity onPress={handleLogout}>
+      <Ionicons name="log-out-outline" size={26} color={colours.danger} />
+    </TouchableOpacity>
+  </View>
+</View>
 
-      <Text style={styles.dateText}>
+      <Text style={[styles.dateText, { color: colours.textLight }]}>
         {new Date().toLocaleDateString("en-IE", {
           weekday: "long",
           day: "numeric",
@@ -178,11 +217,11 @@ export default function HabitsScreen() {
       </Text>
 
       {/* Progress Summary */}
-      <View style={styles.progressCard}>
-        <Text style={styles.progressText}>
+      <View style={[styles.progressCard, { backgroundColor: colours.card }]}>
+        <Text style={[styles.progressText, { color: colours.text }]}>
           {completedCount} of {habitsList.length} completed today
         </Text>
-        <View style={styles.progressBar}>
+        <View style={[styles.progressBar, { backgroundColor: colours.border }]}>
           <View
             style={[
               styles.progressFill,
@@ -197,18 +236,19 @@ export default function HabitsScreen() {
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color="#999" />
+      <View style={[styles.searchBar, { backgroundColor: colours.card }]}>
+        <Ionicons name="search-outline" size={18} color={colours.textLight} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colours.text }]}
           placeholder="Search habits..."
+          placeholderTextColor={colours.textLight}
           value={searchText}
           onChangeText={setSearchText}
           accessibilityLabel="Search habits"
         />
         {searchText.length > 0 && (
           <TouchableOpacity onPress={() => setSearchText("")}>
-            <Ionicons name="close-circle" size={18} color="#999" />
+            <Ionicons name="close-circle" size={18} color={colours.textLight} />
           </TouchableOpacity>
         )}
       </View>
@@ -222,6 +262,7 @@ export default function HabitsScreen() {
         <TouchableOpacity
           style={[
             styles.filterChip,
+            { backgroundColor: colours.card, borderColor: colours.border },
             filterCategory === null && styles.filterChipActive,
           ]}
           onPress={() => setFilterCategory(null)}
@@ -229,6 +270,7 @@ export default function HabitsScreen() {
           <Text
             style={[
               styles.filterChipText,
+              { color: colours.text },
               filterCategory === null && styles.filterChipTextActive,
             ]}
           >
@@ -240,6 +282,7 @@ export default function HabitsScreen() {
             key={cat.id}
             style={[
               styles.filterChip,
+              { backgroundColor: colours.card, borderColor: colours.border },
               filterCategory === cat.id && {
                 backgroundColor: cat.colour,
                 borderColor: cat.colour,
@@ -252,6 +295,7 @@ export default function HabitsScreen() {
             <Text
               style={[
                 styles.filterChipText,
+                { color: colours.text },
                 filterCategory === cat.id && styles.filterChipTextActive,
               ]}
             >
@@ -264,11 +308,11 @@ export default function HabitsScreen() {
       {/* Habits List */}
       {filteredHabits.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="checkmark-circle-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>
+          <Ionicons name="checkmark-circle-outline" size={48} color={colours.textLight} />
+          <Text style={[styles.emptyText, { color: colours.textLight }]}>
             {searchText || filterCategory ? "No habits match your search" : "No habits yet"}
           </Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptySubtext, { color: colours.textLight }]}>
             {searchText || filterCategory ? "Try a different filter" : "Tap + to add your first habit"}
           </Text>
         </View>
@@ -280,7 +324,11 @@ export default function HabitsScreen() {
             const category = getCategoryForHabit(item.categoryId);
             const completed = isCompletedToday(item.id);
             return (
-              <View style={[styles.habitItem, completed && styles.habitCompleted]}>
+              <View style={[
+                styles.habitItem,
+                { backgroundColor: colours.card },
+                completed && styles.habitCompleted,
+              ]}>
                 <TouchableOpacity
                   onPress={() => toggleComplete(item.id)}
                   style={styles.checkbox}
@@ -288,11 +336,15 @@ export default function HabitsScreen() {
                   <Ionicons
                     name={completed ? "checkmark-circle" : "ellipse-outline"}
                     size={28}
-                    color={completed ? "#2ECC71" : "#ccc"}
+                    color={completed ? "#2ECC71" : colours.textLight}
                   />
                 </TouchableOpacity>
                 <View style={styles.habitInfo}>
-                  <Text style={[styles.habitName, completed && styles.habitNameDone]}>
+                  <Text style={[
+                    styles.habitName,
+                    { color: colours.text },
+                    completed && styles.habitNameDone,
+                  ]}>
                     {item.name}
                   </Text>
                   {category && (
@@ -300,19 +352,21 @@ export default function HabitsScreen() {
                       <View
                         style={[styles.categoryDot, { backgroundColor: category.colour }]}
                       />
-                      <Text style={styles.categoryText}>{category.name}</Text>
+                      <Text style={[styles.categoryText, { color: colours.textLight }]}>
+                        {category.name}
+                      </Text>
                     </View>
                   )}
                 </View>
                 <View style={styles.actions}>
                   <TouchableOpacity onPress={() => openEditModal(item)}>
-                    <Ionicons name="pencil-outline" size={20} color="#4A90E2" />
+                    <Ionicons name="pencil-outline" size={20} color={colours.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDelete(item)}
                     style={{ marginLeft: 12 }}
                   >
-                    <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                    <Ionicons name="trash-outline" size={20} color={colours.danger} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -327,31 +381,34 @@ export default function HabitsScreen() {
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+          <View style={[styles.modalContent, { backgroundColor: colours.card }]}>
+            <Text style={[styles.modalTitle, { color: colours.text }]}>
               {editingHabit ? "Edit Habit" : "New Habit"}
             </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colours.border, color: colours.text }]}
               placeholder="Habit name"
+              placeholderTextColor={colours.textLight}
               value={name}
               onChangeText={setName}
               accessibilityLabel="Habit name input"
             />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colours.border, color: colours.text }]}
               placeholder="Description (optional)"
+              placeholderTextColor={colours.textLight}
               value={description}
               onChangeText={setDescription}
               accessibilityLabel="Habit description input"
             />
-            <Text style={styles.label}>Category</Text>
+            <Text style={[styles.label, { color: colours.text }]}>Category</Text>
             <View style={styles.categoryRow}>
               {categoriesList.map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
                   style={[
                     styles.categoryOption,
+                    { borderColor: colours.border },
                     selectedCategory === cat.id && {
                       borderColor: cat.colour,
                       borderWidth: 2,
@@ -362,16 +419,18 @@ export default function HabitsScreen() {
                   <View
                     style={[styles.categoryDot, { backgroundColor: cat.colour }]}
                   />
-                  <Text style={styles.categoryOptionText}>{cat.name}</Text>
+                  <Text style={[styles.categoryOptionText, { color: colours.text }]}>
+                    {cat.name}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.button, { backgroundColor: colours.border }]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: colours.text }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.saveButton]}
@@ -388,26 +447,24 @@ export default function HabitsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5", padding: 16 },
+  container: { flex: 1, padding: 16 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 4,
   },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333" },
-  dateText: { fontSize: 14, color: "#999", marginBottom: 12 },
+  title: { fontSize: 24, fontWeight: "bold" },
+  dateText: { fontSize: 14, marginBottom: 12 },
   progressCard: {
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     elevation: 2,
   },
-  progressText: { fontSize: 14, color: "#555", marginBottom: 8 },
+  progressText: { fontSize: 14, marginBottom: 8 },
   progressBar: {
     height: 8,
-    backgroundColor: "#f0f0f0",
     borderRadius: 4,
     overflow: "hidden",
   },
@@ -415,7 +472,6 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -423,27 +479,24 @@ const styles = StyleSheet.create({
     elevation: 2,
     gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 15, color: "#333" },
+  searchInput: { flex: 1, fontSize: 15 },
   filterRow: { marginBottom: 12 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
     marginRight: 8,
   },
   filterChipActive: { backgroundColor: "#4A90E2", borderColor: "#4A90E2" },
-  filterChipText: { fontSize: 13, color: "#555" },
+  filterChipText: { fontSize: 13 },
   filterChipTextActive: { color: "#fff", fontWeight: "600" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { fontSize: 18, color: "#999", marginTop: 12, textAlign: "center" },
-  emptySubtext: { fontSize: 14, color: "#ccc", marginTop: 4, textAlign: "center" },
+  emptyText: { fontSize: 18, marginTop: 12, textAlign: "center" },
+  emptySubtext: { fontSize: 14, marginTop: 4, textAlign: "center" },
   habitItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     padding: 14,
     borderRadius: 10,
     marginBottom: 10,
@@ -452,11 +505,11 @@ const styles = StyleSheet.create({
   habitCompleted: { opacity: 0.7 },
   checkbox: { marginRight: 12 },
   habitInfo: { flex: 1 },
-  habitName: { fontSize: 16, color: "#333", fontWeight: "500" },
-  habitNameDone: { textDecorationLine: "line-through", color: "#999" },
+  habitName: { fontSize: 16, fontWeight: "500" },
+  habitNameDone: { textDecorationLine: "line-through" },
   categoryBadge: { flexDirection: "row", alignItems: "center", marginTop: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: 4, marginRight: 4 },
-  categoryText: { fontSize: 12, color: "#999" },
+  categoryText: { fontSize: 12 },
   actions: { flexDirection: "row" },
   fab: {
     position: "absolute",
@@ -476,21 +529,19 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
   },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 16, color: "#333" },
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 16 },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     fontSize: 16,
   },
-  label: { fontSize: 14, fontWeight: "600", color: "#555", marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
   categoryRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16 },
   categoryOption: {
     flexDirection: "row",
@@ -498,14 +549,12 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
     margin: 4,
   },
-  categoryOptionText: { fontSize: 13, color: "#333", marginLeft: 4 },
+  categoryOptionText: { fontSize: 13, marginLeft: 4 },
   modalButtons: { flexDirection: "row", gap: 12 },
   button: { flex: 1, padding: 14, borderRadius: 8, alignItems: "center" },
-  cancelButton: { backgroundColor: "#f0f0f0" },
   saveButton: { backgroundColor: "#4A90E2" },
-  cancelText: { color: "#555", fontWeight: "600" },
+  cancelText: { fontWeight: "600" },
   saveText: { color: "#fff", fontWeight: "600" },
 });

@@ -2,19 +2,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { eq } from "drizzle-orm";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 import { db } from "../../db";
 import { categories, habits, targets } from "../../db/schema";
 
 export default function TargetsScreen() {
+  const { colours } = useTheme();
   const [targetsList, setTargetsList] = useState<any[]>([]);
   const [habitsList, setHabitsList] = useState<any[]>([]);
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
@@ -71,7 +73,6 @@ export default function TargetsScreen() {
       Alert.alert("Error", "Please select a habit");
       return;
     }
-
     if (editingTarget) {
       await db
         .update(targets)
@@ -85,7 +86,6 @@ export default function TargetsScreen() {
         userId: global.userId,
       });
     }
-
     setModalVisible(false);
     loadData();
   };
@@ -105,20 +105,18 @@ export default function TargetsScreen() {
   };
 
   const getProgress = (target: any) => {
-    // Simple progress calculation placeholder
-    // Will be based on habit logs
     return Math.floor(Math.random() * target.goal);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Targets</Text>
+    <View style={[styles.container, { backgroundColor: colours.background }]}>
+      <Text style={[styles.title, { color: colours.text }]}>Targets</Text>
 
       {targetsList.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="trophy-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>No targets yet</Text>
-          <Text style={styles.emptySubtext}>Set a goal to stay on track</Text>
+          <Ionicons name="trophy-outline" size={48} color={colours.textLight} />
+          <Text style={[styles.emptyText, { color: colours.textLight }]}>No targets yet</Text>
+          <Text style={[styles.emptySubtext, { color: colours.textLight }]}>Set a goal to stay on track</Text>
         </View>
       ) : (
         <FlatList
@@ -131,12 +129,14 @@ export default function TargetsScreen() {
             const category = getCategoryForHabit(item.habitId);
 
             return (
-              <View style={styles.targetItem}>
+              <View style={[styles.targetItem, { backgroundColor: colours.card }]}>
                 <View style={styles.targetHeader}>
                   <View style={styles.targetInfo}>
-                    <Text style={styles.habitName}>{getHabitName(item.habitId)}</Text>
+                    <Text style={[styles.habitName, { color: colours.text }]}>
+                      {getHabitName(item.habitId)}
+                    </Text>
                     <View style={styles.badges}>
-                      <View style={[styles.badge, { backgroundColor: exceeded ? "#2ECC71" : "#4A90E2" }]}>
+                      <View style={[styles.badge, { backgroundColor: exceeded ? "#2ECC71" : colours.primary }]}>
                         <Text style={styles.badgeText}>{item.type}</Text>
                       </View>
                       {category && (
@@ -148,27 +148,27 @@ export default function TargetsScreen() {
                   </View>
                   <View style={styles.actions}>
                     <TouchableOpacity onPress={() => openEditModal(item)}>
-                      <Ionicons name="pencil-outline" size={20} color="#4A90E2" />
+                      <Ionicons name="pencil-outline" size={20} color={colours.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDelete(item)} style={{ marginLeft: 12 }}>
-                      <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                      <Ionicons name="trash-outline" size={20} color={colours.danger} />
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 <View style={styles.progressRow}>
-                  <View style={styles.progressBar}>
+                  <View style={[styles.progressBar, { backgroundColor: colours.border }]}>
                     <View
                       style={[
                         styles.progressFill,
                         {
                           width: `${percentage}%` as any,
-                          backgroundColor: exceeded ? "#2ECC71" : "#4A90E2",
+                          backgroundColor: exceeded ? "#2ECC71" : colours.primary,
                         },
                       ]}
                     />
                   </View>
-                  <Text style={styles.progressText}>
+                  <Text style={[styles.progressText, { color: colours.textLight }]}>
                     {progress}/{item.goal}
                   </Text>
                 </View>
@@ -176,7 +176,7 @@ export default function TargetsScreen() {
                 {exceeded ? (
                   <Text style={styles.exceededText}>🎉 Target reached!</Text>
                 ) : (
-                  <Text style={styles.remainingText}>
+                  <Text style={[styles.remainingText, { color: colours.textLight }]}>
                     {item.goal - progress} remaining
                   </Text>
                 )}
@@ -192,18 +192,19 @@ export default function TargetsScreen() {
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+          <View style={[styles.modalContent, { backgroundColor: colours.card }]}>
+            <Text style={[styles.modalTitle, { color: colours.text }]}>
               {editingTarget ? "Edit Target" : "New Target"}
             </Text>
 
-            <Text style={styles.label}>Habit</Text>
+            <Text style={[styles.label, { color: colours.text }]}>Habit</Text>
             <View style={styles.optionRow}>
               {habitsList.map((habit) => (
                 <TouchableOpacity
                   key={habit.id}
                   style={[
                     styles.optionButton,
+                    { borderColor: colours.border, backgroundColor: colours.background },
                     selectedHabit === habit.id && styles.optionSelected,
                   ]}
                   onPress={() => setSelectedHabit(habit.id)}
@@ -211,6 +212,7 @@ export default function TargetsScreen() {
                   <Text
                     style={[
                       styles.optionText,
+                      { color: colours.text },
                       selectedHabit === habit.id && styles.optionTextSelected,
                     ]}
                   >
@@ -220,13 +222,14 @@ export default function TargetsScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Type</Text>
+            <Text style={[styles.label, { color: colours.text }]}>Type</Text>
             <View style={styles.typeRow}>
               {(["weekly", "monthly"] as const).map((type) => (
                 <TouchableOpacity
                   key={type}
                   style={[
                     styles.typeButton,
+                    { borderColor: colours.border },
                     selectedType === type && styles.typeSelected,
                   ]}
                   onPress={() => setSelectedType(type)}
@@ -234,6 +237,7 @@ export default function TargetsScreen() {
                   <Text
                     style={[
                       styles.typeText,
+                      { color: colours.text },
                       selectedType === type && styles.typeTextSelected,
                     ]}
                   >
@@ -243,10 +247,11 @@ export default function TargetsScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>Goal (number of completions)</Text>
+            <Text style={[styles.label, { color: colours.text }]}>Goal (number of completions)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colours.border, color: colours.text }]}
               placeholder="e.g. 5"
+              placeholderTextColor={colours.textLight}
               value={goal}
               onChangeText={setGoal}
               keyboardType="numeric"
@@ -255,10 +260,10 @@ export default function TargetsScreen() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.button, { backgroundColor: colours.border }]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: colours.text }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.saveButton]}
@@ -275,13 +280,12 @@ export default function TargetsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5", padding: 16 },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginBottom: 16 },
+  container: { flex: 1, padding: 16 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 16 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center" },
-  emptyText: { fontSize: 18, color: "#999", marginTop: 12 },
-  emptySubtext: { fontSize: 14, color: "#ccc", marginTop: 4 },
+  emptyText: { fontSize: 18, marginTop: 12 },
+  emptySubtext: { fontSize: 14, marginTop: 4 },
   targetItem: {
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 10,
     marginBottom: 12,
@@ -289,23 +293,17 @@ const styles = StyleSheet.create({
   },
   targetHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
   targetInfo: { flex: 1 },
-  habitName: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 6 },
+  habitName: { fontSize: 16, fontWeight: "600", marginBottom: 6 },
   badges: { flexDirection: "row", gap: 6 },
   badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
   actions: { flexDirection: "row" },
   progressRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  progressBar: {
-    flex: 1,
-    height: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 5,
-    overflow: "hidden",
-  },
+  progressBar: { flex: 1, height: 10, borderRadius: 5, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 5 },
-  progressText: { fontSize: 13, color: "#555", minWidth: 40, textAlign: "right" },
+  progressText: { fontSize: 13, minWidth: 40, textAlign: "right" },
   exceededText: { fontSize: 13, color: "#2ECC71", marginTop: 6, fontWeight: "600" },
-  remainingText: { fontSize: 13, color: "#999", marginTop: 6 },
+  remainingText: { fontSize: 13, marginTop: 6 },
   fab: {
     position: "absolute",
     bottom: 24,
@@ -324,25 +322,22 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
     maxHeight: "80%",
   },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 16, color: "#333" },
-  label: { fontSize: 14, fontWeight: "600", color: "#555", marginBottom: 8 },
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
   optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
   optionButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#f9f9f9",
   },
   optionSelected: { backgroundColor: "#4A90E2", borderColor: "#4A90E2" },
-  optionText: { fontSize: 13, color: "#333" },
+  optionText: { fontSize: 13 },
   optionTextSelected: { color: "#fff" },
   typeRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   typeButton: {
@@ -350,15 +345,13 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
     alignItems: "center",
   },
   typeSelected: { backgroundColor: "#4A90E2", borderColor: "#4A90E2" },
-  typeText: { fontSize: 14, color: "#333", fontWeight: "600" },
+  typeText: { fontSize: 14, fontWeight: "600" },
   typeTextSelected: { color: "#fff" },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -366,8 +359,7 @@ const styles = StyleSheet.create({
   },
   modalButtons: { flexDirection: "row", gap: 12 },
   button: { flex: 1, padding: 14, borderRadius: 8, alignItems: "center" },
-  cancelButton: { backgroundColor: "#f0f0f0" },
   saveButton: { backgroundColor: "#4A90E2" },
-  cancelText: { color: "#555", fontWeight: "600" },
+  cancelText: { fontWeight: "600" },
   saveText: { color: "#fff", fontWeight: "600" },
 });

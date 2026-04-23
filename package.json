@@ -12,24 +12,31 @@
     "test": "jest"
   },
   "jest": {
-  "testEnvironment": "node",
-  "globals": {
-    "__DEV__": true
+    "testEnvironment": "node",
+    "globals": {
+      "__DEV__": true
+    },
+    "transform": {
+      "^.+\\.(ts|tsx|js|jsx)$": "babel-jest"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-native|@react-native|expo|@expo)/)",
+      "node_modules/react-native/jest/setup.js"
+    ],
+    "moduleNameMapper": {
+      "^react-native$": "<rootDir>/__mocks__/react-native.js"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json"
+    ]
   },
-  "transform": {
-    "^.+\\.(ts|tsx|js|jsx)$": "babel-jest"
-  },
-  "transformIgnorePatterns": [
-    "node_modules/(?!(react-native|@react-native|expo|@expo)/)",
-    "node_modules/react-native/jest/setup.js"
-  ],
-  "moduleNameMapper": {
-    "^react-native$": "<rootDir>/__mocks__/react-native.js"
-  },
-  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"]
-},
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.2.2",
